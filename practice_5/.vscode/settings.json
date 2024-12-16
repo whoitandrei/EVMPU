@@ -1,7 +1,0 @@
-{
-    "files.associations": {
-        "*.go": "go",
-        "xmmintrin.h": "c",
-        "mmintrin.h": "c"
-    }
-}
