@@ -1,3 +1,4 @@
+#define _CRT_RAND_S
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
@@ -41,7 +42,7 @@ unsigned long long measure_time(int *arr, int size, int iterations) {
 // Функция для обхода массива прямым порядком
 void traverse_forward(int *arr, int size) {
     for (int i = 0; i < size; i++) {
-        arr[i] = i+1;  // Просто доступ к элементу для измерения времени
+        arr[i] = i+1;  
     }
 	arr[size-1] = 0;
 }
@@ -49,40 +50,36 @@ void traverse_forward(int *arr, int size) {
 // Функция для обхода массива обратным порядком
 void traverse_reverse(int *arr, int size) {
     for (int i = size - 1; i >= 0; i--) {
-        arr[i] = i-1;  // Просто доступ к элементу для измерения времени
+        arr[i] = i-1; 
     }
 	arr[0] = size-1;
 }
 
 // Функция для случайного обхода массива
-void traverse_random(int *arr, int size) {
-    int *indices = (int*)malloc(size * sizeof(int));  // Выделяем память для индексов
-    if (indices == NULL) {
-        printf("Ошибка выделения памяти для индексов!\n");
-        exit(1);
+void traverse_random(int *buffer, int size) {
+
+    unsigned int* indexes = malloc(sizeof(unsigned int) * size);
+
+    for (unsigned int i = 0; i < size; i++) {
+        indexes[i] = i;
     }
 
-    // Инициализация индексов от 0 до size-1
-    for (int i = 0; i < size; i++) {
-        indices[i] = i;
+    for (unsigned int i = size - 1; i > 0; i--) {
+        unsigned int j;
+		rand_s(&j);
+        j = j % (i + 1);
+        unsigned int temp = indexes[i];
+        indexes[i] = indexes[j];
+        indexes[j] = temp;
     }
 
-    // Перемешивание индексов с использованием алгоритма Фишера-Йейтса
-    for (int i = size - 1; i > 0; i--) {
-        int j = rand() % (i + 1);
-        int temp = indices[i];
-        indices[i] = indices[j];
-        indices[j] = temp;
+    for (unsigned int i = 0; i < size - 1; i++) {
+        buffer[indexes[i]] = indexes[i + 1];
     }
+    buffer[indexes[size - 1]] = indexes[0];
 
-    // Доступ к элементам в случайном порядке
-    for (int i = 0; i < size; i++) {
-        arr[i] = indices[i];  // Просто доступ к элементу для измерения времени
-    }
-
-    free(indices);  // Освобождаем память для индексов
+    free(indexes);
 }
-
 
 
 int heat(int *arr){
@@ -92,31 +89,32 @@ int heat(int *arr){
 	clock_t t = clock();
 	while (clock()-t < 1000){
 		for (int i = 0; i < 100; ++i){
-			data1[i] += data2[i];
+			for (int j = 0; j < 100; ++j){
+				data1[i] *= data2[i];
+			}
 		}
 	}
 	return arr[0];
 }
 	
 int main() {
-    int iterations = 5;  // Количество повторений для точности
+    int iterations = 15;  // Количество повторений для точности
     int size = 256;
 	int *arr = (int*)malloc(size * sizeof(int));  // Выделяем память для массива
 	
 	int res = heat(arr);
 	printf("%d ", res);
 	
-	traverse_forward(arr, size);
-	res = thru(arr, size, 1);
-	printf("%d ", res);
-	
 	free(arr);
 	int c = 0;
-	int results[58 * 3];
+	int results[1000] = { 0 };
 	
-    while (size <= 8388608) {
+    while (size <= 256 * 1024 * 32) {
 
         int *arr = (int*)malloc(size * sizeof(int)); 
+		int *arr_f = (int*)malloc(size * sizeof(int));
+		int *arr_r = (int*)malloc(size * sizeof(int));
+		int *arr_rand = (int*)malloc(size * sizeof(int));
 		
         if (arr == NULL) {
             printf("Ошибка выделения памяти!\n");
@@ -127,20 +125,28 @@ int main() {
 		traverse_forward(arr, size);
 		res = thru(arr, size, 1);
 		printf("\ntechnical output: %d \n", res);
-
+		
         // Замер времени для каждого способа обхода
-        traverse_forward(arr, size);
-		results[c] = measure_time(arr, size, iterations) / size / iterations;
+        traverse_forward(arr_f, size);
+		res = thru(arr_f, size, 1);
+		results[c] = measure_time(arr_f, size, iterations) / size / iterations;
 		
-        traverse_reverse(arr, size);
-        results[58+c] = measure_time(arr, size, iterations)/ size / iterations;
+        traverse_reverse(arr_r, size);
+		res = thru(arr_r, size, 1);
+        results[c+1] = measure_time(arr_r, size, iterations)/ size / iterations;
 		
-		traverse_random(arr, size);
-		results[58 * 2 + c] =  measure_time(arr, size, iterations)/ size / iterations;
-		printf("\nres: %d %d %d", results[c], results[58 +c], results[58*2 +c]);
-        size = (int)(size * 1.2);
+		traverse_random(arr_rand, size);
+		res = thru(arr_rand, size, 1);
+		results[c+2] =  measure_time(arr_rand, size, iterations)/ size / iterations;
+		
+		printf("\ntechnical output: %d \n", res);
+		printf("\nres: %d %d %d", results[c], results[c+1], results[c+2]);
+        size = (int)(size * 1.1);
         free(arr);  // Освобождаем память
-		c++;
+		free(arr_f);
+		free(arr_r);
+		free(arr_rand);
+		c += 3;
     }
 	
 	FILE *file = fopen("output.txt", "w");
@@ -150,8 +156,8 @@ int main() {
         return 1;
     }
 	for (int j = 0; j < 3; ++j){
-		for (int i = 0; i < 58; i++) {
-			fprintf(file, "%d, ", results[58*j +i]); 
+		for (int i = 0; i < c/3; i++) {
+			fprintf(file, "%d, ", results[3*i+j]); 
 		}
 		fprintf(file, "\n");
 	}

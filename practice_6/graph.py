@@ -1,20 +1,42 @@
 import matplotlib.pyplot as plt
+import numpy as np
 
-measurements1 = [10, 10, 10, 10, 10, 10, 10, 10, 10, 5, 10, 10, 12, 10, 6, 10, 10, 15, 10, 13, 10, 10, 5, 10, 9, 5, 5, 9, 5, 5, 5, 5, 5, 5, 5, 5, 5, 10, 9, 9, 5, 7, 5, 5, 9, 8, 6, 6, 10, 8, 8, 5, 5, 7, 8, 5, 5, 6]
-measurements2 = [10, 10, 10, 10, 11, 10, 10, 10, 6, 5, 10, 10, 10, 10, 10, 10, 16, 10, 10, 13, 10, 12, 10, 10, 5, 5, 5, 9, 5, 5, 5, 6, 10, 10, 5, 5, 5, 9, 9, 9, 5, 5, 5, 5, 10, 10, 5, 9, 10, 9, 9, 5, 5, 8, 5, 7, 7, 7, ]
-measurements3 = [10, 10, 10, 10, 10, 10, 10, 10, 6, 10, 10, 10, 5, 10, 10, 10, 10, 10, 10, 10, 6, 15, 16, 17, 9, 17, 10, 16, 5, 11, 11, 21, 24, 25, 16, 20, 21, 32, 33, 30, 35, 40, 42, 45, 47, 51, 79, 102, 181, 217, 249, 273, 282, 307, 319, 327, 337, 347]
+# Читаем данные из файла
+with open("output.txt", "r") as file:
+    data = file.read()
 
+# Разбиваем данные на массивы
+data_lists = data.split("\n")  # Разделяем на строки
+measurements = [list(map(int, line.split(",")[:-1])) for line in data_lists if line.strip()]  # Преобразуем строки в списки чисел
 
+# Проверяем, что данные корректно загружены
+measurements1, measurements2, measurements3 = measurements
+
+# Генерация значений на оси X (индексы точек и размеры массива)
+n_values = np.arange(len(measurements1))  # Количество точек по X
+array_sizes = 256 * (1.1 ** n_values)  # Размер массива в байтах
+
+# Перевод в Кб/Мб для подписей
+array_sizes_kb = array_sizes / 256  # Перевод в Кб
+array_sizes_labels = [f"{x:.1f} Кб" if x < 1024 else f"{x/1024:.2f} Мб" for x in array_sizes_kb]
+
+# Построение графиков
 plt.figure(figsize=(10, 6))
 
-plt.plot(measurements1, label='последовательный', color='blue')
-plt.plot(measurements2, label='обратный', color='green')
-plt.plot(measurements3, label='случайный', color='red')
+plt.plot(n_values, measurements1, label='последовательный', color='blue')
+plt.plot(n_values, measurements2, label='обратный', color='green')
+plt.plot(n_values, measurements3, label='случайный', color='red')
 
 plt.title("Графики измерений")
-plt.xlabel("размер массива (256*(1.2**n), где n - целое число на оси Ох)")
+plt.xlabel("размер массива")
 plt.ylabel("количество тактов процессора")
 plt.legend()
 
+# Устанавливаем подписи на оси X без изменения масштаба
+num_xticks = 10  # Количество подписей на оси X
+xticks_indices = np.linspace(0, len(n_values) - 1, num_xticks, dtype=int)
+plt.xticks(xticks_indices, [array_sizes_labels[i] for i in xticks_indices], rotation=45)
+
 plt.grid(True)
+plt.tight_layout()
 plt.show()
